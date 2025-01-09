@@ -38,6 +38,7 @@ const Dashboard = () => {
       } else {
         const parsedConverterResponse: ParsedConverterResponse =
           await converterResponse.json();
+        console.log('parsedConverterResponse', parsedConverterResponse);
         setDatabaseQuery(parsedConverterResponse.databaseQuery);
         setDatabaseQueryResults(parsedConverterResponse.databaseQueryResult);
       }

@@ -7,6 +7,7 @@ export const queryStarWarsDatabase: RequestHandler = async (
   next
 ) => {
   const { databaseQuery } = res.locals;
+  console.log('database query', databaseQuery);
   if (!databaseQuery) {
     const error: ServerError = {
       log: 'Database query middleware did not receive a query',
@@ -16,6 +17,6 @@ export const queryStarWarsDatabase: RequestHandler = async (
     return next(error);
   }
 
-    res.locals.databaseQueryResult = [{ name: 'Sly Moore' }]
-    return next();
+  res.locals.databaseQueryResult = [{ name: 'Sly Moore' }];
+  return next();
 };
