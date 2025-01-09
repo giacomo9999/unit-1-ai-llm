@@ -1,22 +1,42 @@
 import { RequestHandler } from 'express';
 import { ServerError } from '../types';
+import pg from 'pg';
+
+const client = new pg.Client({
+  connectionString: process.env.SUPABASE_URI,
+});
+
+await client.connect();
 
 export const queryStarWarsDatabase: RequestHandler = async (
   _req,
   res,
   next
 ) => {
-  const { databaseQuery } = res.locals;
-  console.log('database query', databaseQuery);
-  if (!databaseQuery) {
-    const error: ServerError = {
-      log: 'Database query middleware did not receive a query',
-      status: 500,
-      message: { err: 'An error occurred before querying the database' },
-    };
-    return next(error);
-  }
+  try {
+    const { databaseQuery } = res.locals;
 
-  res.locals.databaseQueryResult = [{ name: 'Sly Moore' }];
-  return next();
+    console.log('databaseQuery', databaseQuery);
+
+    if (!databaseQuery) {
+      const error: ServerError = {
+        log: 'Database query middleware did not receive a query',
+        status: 500,
+        message: { err: 'An error occurred before querying the database' },
+      };
+      return next(error);
+    }
+    const result = await client.query(databaseQuery);
+    console.log('database result', result);
+
+    res.locals.databaseQueryResult = result.rows;
+    return next();
+  } catch (e) {
+    const serverError: ServerError = {
+      log: `Database query failed: ${e instanceof Error ? e.message : 'Unknown error'}`,
+      status: 500,
+      message: { err: 'An error occurred while querying the database' },
+    };
+    return next(serverError);
+  }
 };
