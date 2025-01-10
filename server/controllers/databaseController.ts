@@ -1,6 +1,7 @@
 import { RequestHandler } from 'express';
 import { ServerError } from '../types';
-import { Pool } from 'pg';
+import pg from 'pg';
+const { Pool } = pg;
 
 export const queryStarWarsDatabase: RequestHandler = async (
   _req,
