@@ -1,6 +1,6 @@
 import { RequestHandler } from 'express';
 import { ServerError } from '../types';
-// import { SCHEMA } from '../../schema';
+import OpenAI from 'openai';
 
 export const queryOpenAI: RequestHandler = async (_req, res, next) => {
   const { naturalLanguageQuery } = res.locals;
@@ -170,37 +170,36 @@ CREATE TABLE  public.starship_specs (
 `;
 
   try {
-    const openaiResponse = await fetch(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          model: 'gpt-4',
-          messages: [
-            {
-              role: 'user',
-              content: `You are a SQL query generator. Using the schema: ${schema} and my prompt: ${naturalLanguageQuery}, come up with a raw SQL query.
-              
-              Only return the raw sql query. When you return it, return it in a single line
-              `,
-            },
-          ],
-          temperature: 0.7,
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        },
-      }
-    );
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    const responseData = await openaiResponse.json();
-    console.log('responseDataMessage', responseData.choices[0].message);
-    res.locals.databaseQuery = responseData.choices[0].message.content;
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        {
+          role: 'user',
+          content: `You are a SQL query generator. Using the schema: ${schema} and my prompt: ${naturalLanguageQuery}, come up with a raw SQL query.
+          
+          Only return the raw sql query. When you return it, return it in a single line
+          `,
+        },
+      ],
+      temperature: 0.7,
+    });
+
+    if (!completion.choices?.[0]?.message?.content) {
+      const error: ServerError = {
+        log: 'OpenAI did not return a completion',
+        status: 500,
+        message: { err: 'An error occurred while querying OpenAI' },
+      };
+      return next(error);
+    }
+
+    res.locals.databaseQuery = completion.choices[0].message.content;
     return next();
   } catch (error) {
     return next({
-      log: `OpenAI query failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      log: `queryOpenAI: ${error}`,
       status: 500,
       message: { err: 'An error occurred while querying OpenAI' },
     });
